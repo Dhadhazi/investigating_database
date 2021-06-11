@@ -21,7 +21,7 @@ ORDER BY 2, 1
 ```
 
 ## Question 2
-> Finally, provide a table with the family-friendly film category, each of the quartiles, and the corresponding count of movies within each combination of film category for each corresponding rental duration category. The resulting table should have three columns: Category, Rental length catehory, Count
+> Finally, provide a table with the family-friendly film category, each of the quartiles, and the corresponding count of movies within each combination of film category for each corresponding rental duration category. The resulting table should have three columns: Category, Rental length category, Count
 
 ```sql
 SELECT 
@@ -29,8 +29,10 @@ SELECT
       standard_quartile,
       COUNT(*)
 FROM
-    (SELECT c.name category, f.rental_duration,
-     NTILE(4) OVER (ORDER BY f.rental_duration) AS standard_quartile
+    (SELECT 
+          c.name category, 
+          f.rental_duration,
+          NTILE(4) OVER (ORDER BY f.rental_duration) AS standard_quartile
      FROM category c
      JOIN film_category fc
      ON c.category_id = fc.category_id
