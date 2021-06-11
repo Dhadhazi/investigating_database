@@ -21,21 +21,24 @@ ORDER BY 2, 1
 ```
 
 ## Question 2
-> Now we need to know how the length of rental duration of these family-friendly movies compares to the duration that all movies are rented for. Can you provide a table with the movie titles and divide them into 4 levels (first_quarter, second_quarter, third_quarter, and final_quarter) based on the quartiles (25%, 50%, 75%) of the rental duration for movies across all categories? Make sure to also indicate the category that these family-friendly movies fall into.
+> Finally, provide a table with the family-friendly film category, each of the quartiles, and the corresponding count of movies within each combination of film category for each corresponding rental duration category. The resulting table should have three columns: Category, Rental length catehory, Count
 
 ```sql
 SELECT 
-      f.title, 
-      c.name, 
-      f.rental_duration, 
-      NTILE(4) OVER (ORDER BY f.rental_duration) AS standard_quartile
-FROM film_category fc
-JOIN category c
-ON c.category_id = fc.category_id
-JOIN film f
-ON f.film_id = fc.film_id
-WHERE c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music')
-ORDER BY 3
+      category, 
+      standard_quartile,
+      COUNT(*)
+FROM
+    (SELECT c.name category, f.rental_duration,
+     NTILE(4) OVER (ORDER BY f.rental_duration) AS standard_quartile
+     FROM category c
+     JOIN film_category fc
+     ON c.category_id = fc.category_id
+     JOIN film f
+     ON fc.film_id = f.film_id
+     WHERE c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music')) sub
+GROUP BY 1, 2
+ORDER BY 1, 2
 ```
 
 ## Question 3
@@ -60,20 +63,29 @@ ORDER BY count_rentals DESC
 > We would like to know who were our top 10 paying customers, how many payments they made on a monthly basis during 2007, and what was the amount of the monthly payments. Can you write a query to capture the customer name, month and year of payment, and total payment amount for each month by these top 10 paying customers?
 
 ```sql
-SELECT DATE_TRUNC('month', p.payment_date) pay_month, c.first_name || ' ' || c.last_name AS full_name, COUNT(p.amount) AS pay_countpermon, SUM(p.amount) AS pay_amount
-FROM customer c
-     JOIN payment p
-     ON p.customer_id = c.customer_id
-WHERE c.first_name || ' ' || c.last_name IN
-(SELECT t1.full_name
-     FROM
-          (SELECT c.first_name || ' ' || c.last_name AS full_name, SUM(p.amount) as amount_total
-          FROM customer c
-               JOIN payment p
-               ON p.customer_id = c.customer_id
-          GROUP BY 1
-          ORDER BY 2 DESC
-LIMIT 10) t1) AND (p.payment_date BETWEEN '2007-01-01' AND '2008-01-01')
-GROUP BY 2, 1
-ORDER BY 2, 1, 3
+WITH sub AS (
+  SELECT 
+        c.customer_id, 
+        SUM(p.amount) AS total
+  FROM customer c
+  JOIN payment p
+  ON p.customer_id = c.customer_id
+  GROUP BY c.customer_id
+  ORDER BY total DESC
+  LIMIT 10
+)
+
+SELECT 
+      DATE_TRUNC('month', payment_date) AS pay_mon, 
+      CONCAT(first_name, ' ', last_name) AS fullname, 
+      COUNT(p.amount) AS pay_countpermon, 
+      SUM(p.amount) AS pay_amount
+FROM sub
+JOIN customer c
+ON sub.customer_id = c.customer_id
+JOIN payment p
+ON p.customer_id = c.customer_id
+WHERE payment_date >= '2007-01-01' AND payment_date < '2008-01-01'
+GROUP BY 1, 2
+ORDER BY 2, 1
 ```
